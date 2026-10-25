@@ -1,0 +1,8 @@
+{# Выбор «пусто / да / нет» (ИБП, Электрон). Пусто - не выбрано, на сайте не показывается. #}
+{% macro yesno(name, title, current) %}
+<fieldset class="seg"><legend>{{ title }}</legend>
+  <div class="opts">{% for v, t in [('', 'пусто'), ('да', 'да'), ('нет', 'нет')] %}
+  <label><input type="radio" name="{{ name }}" value="{{ v }}" {% if (current or '') == v %}checked{% endif %}><span>{{ t }}</span></label>
+  {% endfor %}</div>
+</fieldset>
+{% endmacro %}

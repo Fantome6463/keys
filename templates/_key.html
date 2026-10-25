@@ -1,0 +1,40 @@
+{# Карточка ключа. full - страница одного ключа (всё крупно), иначе - строка в результатах поиска. #}
+{% from "_rings.html" import ring_url %}
+
+{% macro flag(name, value) -%}
+{% if value %}<span class="flag {{ 'yes' if value == 'да' else 'no' }}">{{ name }}: {{ value }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro key_card(k, full=false) %}
+<div class="card key{% if full %} full{% endif %}">
+  {% if full %}<h1 class="addr">{{ k.address }}</h1>
+  {% else %}<a class="addr" href="{{ url_for('key_view', kid=k.id) }}">{{ k.address }} <span class="open">›</span></a>{% endif %}
+  <div class="where">
+    {% if k.cabinet_id %}
+    <span class="cab-tile"><small>Шкаф</small><b>{{ k.cabinet_number }}</b>{% if k.cabinet_name %}<em>{{ k.cabinet_name }}</em>{% endif %}</span>
+    {% else %}
+    <span class="elsewhere"><small>Не в шкафу — хранится</small><b>{{ k.info|phones if k.info else 'место не указано' }}</b></span>
+    {% endif %}
+    {% if k.ring %}<a class="ring-link" href="{{ ring_url(k) }}" title="Показать всё кольцо"><small>Кольцо ›</small><b>{{ k.ring }}</b></a>
+    {% elif k.cabinet_id %}<span><small>Кольцо</small><b>—</b></span>{% endif %}
+    {% if k.ring_pos %}<span><small>Номер на кольце</small><b>{{ k.ring_pos }}</b></span>{% endif %}
+    {% if k.box or k.cabinet_id %}<span><small>Ящик</small><b>{{ k.box or '—' }}</b></span>{% endif %}
+    {% if k.floor %}<span><small>Этаж</small><b>{{ k.floor }}</b></span>{% endif %}
+  </div>
+  {% if k.ups or k.electron %}<div class="flags">{{ flag('ИБП', k.ups) }}{{ flag('Электрон', k.electron) }}</div>{% endif %}
+  {% if k.info and k.cabinet_id %}<div class="info comment">{{ k.info|phones }}</div>{% endif %}
+  {% if k.house_note %}<div class="info comment house"><small>Для всего дома</small>{{ k.house_note|phones }}</div>{% endif %}
+  <div class="actions">
+    {% if user.is_admin %}
+    <a href="{{ url_for('key_edit', kid=k.id) }}">Изменить</a>
+    <form method="post" action="{{ url_for('key_delete', kid=k.id) }}" class="inline"
+          onsubmit='return confirm({{ ("Удалить ключ «" ~ k.address ~ "»?")|tojson }})'>
+      <input type="hidden" name="csrf" value="{{ csrf_token }}">
+      <button class="link danger">Удалить</button>
+    </form>
+    {% else %}
+    <a href="{{ url_for('key_note', kid=k.id, back=request.full_path|replace('partial=1&', '')) }}">✎ Изменить</a>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}

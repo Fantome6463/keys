@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+{% if rows is none %}
+<form method="post" enctype="multipart/form-data" class="card narrow">
+  <h1>Импорт журнала</h1>
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <p>Загрузите таблицу (CSV), распознанную с фото журнала. Сначала будет показано, что добавится, —
+     ничего не запишется, пока не нажмёте «Добавить».</p>
+  <label>Файл <input type="file" name="file" accept=".csv,text/csv" required></label>
+  <button>Показать, что добавится</button>
+  <p class="muted small">Колонки: Шкаф; Где стоит; Кольцо; № на кольце; Улица; Дом; Подъезд; Этаж; Ящик; ИБП; Электрон; Примечание; Примечание к дому.
+     Шкафы, которых ещё нет, создадутся сами. Строки, у которых этот номер на кольце в шкафу уже занят, пропускаются.</p>
+</form>
+{% else %}
+<h1>Проверьте перед добавлением</h1>
+<p>Будет добавлено ключей: <b>{{ new }}</b> из {{ rows|length }}.</p>
+<form method="post">
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <input type="hidden" name="data" value="{{ data }}">
+  <input type="hidden" name="confirm" value="1">
+  <button {% if not new %}disabled{% endif %}>Добавить {{ new }}</button>
+  <a href="{{ url_for('import_keys') }}">Отмена</a>
+</form>
+<div class="import-list">
+  {% for r in rows %}
+  <div class="import-row{% if r.status %} skip{% endif %}">
+    <span class="pos">{{ r.ring or '—' }}/{{ r.ring_pos or '—' }}</span>
+    <div class="body">
+      <b>{{ r.address_text or '—' }}</b>
+      <div class="muted small">
+        {{ r.cabinet or 'не в шкафу' }}{% if r.box %} · ящик {{ r.box }}{% endif %}{% if r.floor %} · этаж {{ r.floor }}{% endif %}
+        {%- if r.ups %} · ИБП: {{ r.ups }}{% endif %}{% if r.electron %} · Электрон: {{ r.electron }}{% endif %}
+      </div>
+      {% if r.info %}<div class="small{% if 'ПРОВЕРИТЬ' in r.info %} warn{% endif %}">{{ r.info }}</div>{% endif %}
+      {% if r.house_note %}<div class="small{% if 'ПРОВЕРИТЬ' in r.house_note %} warn{% endif %}">Для всего дома: {{ r.house_note }}</div>{% endif %}
+      {% if r.status %}<div class="small danger">Пропуск: {{ r.status }}</div>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

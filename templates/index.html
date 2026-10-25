@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<form method="get" class="search-form card">
+  <div class="search">
+    <div class="search-box">
+      <input name="q" id="q" value="{{ q }}" type="search" placeholder="Найти ключ…"
+             autocomplete="off" autofocus>
+      <button type="button" class="clear" id="clear" title="Очистить (Esc)" aria-label="Очистить"
+              {% if not q %}hidden{% endif %}>&times;</button>
+    </div>
+    <button>Найти</button>
+  </div>
+  <p class="muted hint">Пишите адрес, ящик или шкаф — например: <i>ленина 12 3</i>, <i>7-20</i>, <i>кольцо 1</i></p>
+</form>
+
+<div id="results">
+{% if results is not none %}{% include "_results.html" %}{% endif %}
+</div>
+
+<h2>Шкафы</h2>
+{% if cabinets %}
+<div class="cabinets">
+  {% for c in cabinets %}
+  <div class="card cab {% if c.id == cabinet_id %}active{% endif %}">
+    <a href="{{ url_for('index', cabinet=c.id) }}">
+      <span class="count" title="ключей">{{ c.key_count }}</span>
+      <span><b>{{ c.number }}</b>{% if c.name %}<span class="name muted">{{ c.name }}</span>{% endif %}<span class="name muted">ключей: {{ c.key_count }}</span></span>
+    </a>
+    {% if user.is_admin %}
+    <div class="actions">
+      <a href="{{ url_for('key_edit', cabinet=c.id) }}">+ ключ</a>
+      <a href="{{ url_for('cabinet_edit', cid=c.id) }}">Изменить</a>
+      <form method="post" action="{{ url_for('cabinet_delete', cid=c.id) }}" class="inline"
+            onsubmit='return confirm({{ ("Удалить шкаф " ~ c.number ~ "?")|tojson }})'>
+        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+        <button class="link danger">Удалить</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+  <p class="muted">Шкафов пока нет.{% if user.is_admin %} <a href="{{ url_for('cabinet_edit') }}">Добавить первый</a>.{% endif %}</p>
+{% endif %}
+<script>
+  // Крестик и Esc: очистить строку и сразу печатать новый запрос.
+  const q = document.getElementById("q"), clear = document.getElementById("clear");
+  function reset() {
+    q.value = "";
+    clear.hidden = true;
+    document.getElementById("results").innerHTML = "";
+    history.replaceState(null, "", location.pathname);
+    q.focus();
+  }
+  clear.addEventListener("click", reset);
+
+  // Живой поиск: результаты появляются, пока печатаешь (без кнопки «Найти»).
+  let timer = null, last = q.value.trim(), seq = 0;
+  q.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      const text = q.value.trim();
+      if (text === last) return;
+      last = text;
+      const box = document.getElementById("results");
+      if (text.length < 2) { box.innerHTML = ""; history.replaceState(null, "", location.pathname); return; }
+      const my = ++seq;
+      try {
+        const resp = await fetch("?partial=1&q=" + encodeURIComponent(text), { headers: { "X-Requested-With": "fetch" } });
+        if (!resp.ok || my !== seq) return;  // пришёл ответ на старый запрос - не нужен
+        box.innerHTML = await resp.text();
+        history.replaceState(null, "", "?q=" + encodeURIComponent(text));
+      } catch (e) { /* нет связи - сработает обычная кнопка «Найти» */ }
+    }, 250);
+  });
+  q.addEventListener("input", () => { clear.hidden = !q.value; });
+  q.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); reset(); } });
+  // курсор в конец текста, чтобы можно было сразу дописать
+  if (q.value) q.setSelectionRange(q.value.length, q.value.length);
+</script>
+{% endblock %}

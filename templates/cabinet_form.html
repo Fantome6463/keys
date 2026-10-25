@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<form method="post" class="card narrow">
+  <h1>{{ 'Шкаф ' ~ cab.number if cab else 'Новый шкаф' }}</h1>
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <label>Номер шкафа целиком <input name="number" value="{{ cab.number if cab else '' }}" required autofocus
+                            placeholder="FTTB 0"></label>
+  <label>Где стоит (необязательно) <input name="name" value="{{ cab.name if cab else '' }}"
+                                         placeholder="например: коридор, 2 этаж"></label>
+  <button>Сохранить</button>
+  <a href="{{ url_for('index') }}">Отмена</a>
+</form>
+{% endblock %}

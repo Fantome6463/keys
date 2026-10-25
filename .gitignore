@@ -1,0 +1,11 @@
+keys.db
+keys.db-*
+.secret_key
+__pycache__/
+.venv/
+*.csv
+Keys.exe
+deploy/app.ico
+deploy/app-settings.json
+deploy/logs/
+backups/

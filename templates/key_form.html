@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% from "_fields.html" import yesno %}
+{% block content %}
+{% if key %}{% set sel = key.cabinet_id %}
+{% elif prefill.get('cabinet') == 'none' %}{% set sel = none %}
+{% else %}{% set sel = default_cabinet or (cabinets[0].id if cabinets else none) %}{% endif %}
+{% macro val(name) %}{{ key[name] if key else prefill.get(name, '') }}{% endmacro %}
+{# следующая строка журнала: улица уже заполнена - курсор сразу в «Дом» #}
+{% set focus = 'house' if (not key and prefill.get('street')) else 'street' %}
+<form method="post" class="card narrow">
+  <h1>{{ 'Изменить ключ' if key else 'Новый ключ' }}</h1>
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <h2 class="section">Где висит ключ</h2>
+  <label>Шкаф
+    <select name="cabinet_id">
+      <option value="" {% if sel is none %}selected{% endif %}>Не в шкафу (где лежит — напишите в примечании)</option>
+      {% for c in cabinets %}
+        <option value="{{ c.id }}" {% if c.id == sel %}selected{% endif %}>{{ c.number }}{% if c.name %} — {{ c.name }}{% endif %}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <div class="row pair">
+    <label>Кольцо <input name="ring" value="{{ val('ring') }}" inputmode="numeric"></label>
+    <label>№ на кольце <input name="ring_pos" value="{{ val('ring_pos') }}" inputmode="numeric"></label>
+  </div>
+  <label>№ ящика <input name="box" value="{{ val('box') }}" placeholder="Д-007-10"></label>
+
+  <h2 class="section">Адрес</h2>
+  <label>Улица <input name="street" value="{{ val('street') }}" list="streets" required
+                     placeholder="Ленина" autocomplete="off" {% if focus == 'street' %}autofocus{% endif %}></label>
+  <datalist id="streets">{% for s in streets %}<option value="{{ s }}">{% endfor %}</datalist>
+  <div class="row pair">
+    <label>Дом <input name="house" value="{{ val('house') }}" placeholder="12" onfocus="this.select()"
+                      {% if focus == 'house' %}autofocus{% endif %}></label>
+    <label>Подъезд <input name="entrance" value="{{ val('entrance') }}" placeholder="4"></label>
+  </div>
+  <label>Этаж <input name="floor" value="{{ key.floor if key else '' }}" placeholder="1"></label>
+  <p class="muted preview">Будет записано: <b id="preview">{{ key.address if key else '' }}</b></p>
+
+  <h2 class="section">Дополнительно</h2>
+  <div class="row pair">
+    {{ yesno('ups', 'ИБП', key.ups if key else '') }}
+    {{ yesno('electron', 'Электрон', key.electron if key else '') }}
+  </div>
+  <label>Примечание к ключу <small>— высоко, код и т. п.</small>
+    <textarea name="info" rows="2" placeholder="высоко, код 145">{{ val('info') }}</textarea></label>
+  <label>Примечание к дому <small>— одно на все подъезды (УК, телефон ТСЖ)</small>
+    <textarea name="house_note" rows="2">{{ house_note }}</textarea></label>
+  <input type="hidden" name="house_note_orig" value="{{ house_note }}">
+
+  <div class="form-buttons">
+    <button>Сохранить</button>
+    {% if not key %}<button name="another" value="1" class="secondary">Сохранить и следующий</button>{% endif %}
+    <a href="{{ url_for('index') }}">Отмена</a>
+  </div>
+</form>
+<script>
+  // Показывает, как адрес будет записан (так же собирает его сервер).
+  const types = {{ ["ул","улица","пр","пр-т","просп","проспект","пер","переулок","ш","шоссе","б-р","бульвар","пл","площадь","наб","набережная","проезд","мкр","тупик","аллея","кв-л"]|tojson }};
+  const form = document.currentScript.previousElementSibling;
+  function preview() {
+    let street = form.street.value.trim(), house = form.house.value.trim(), entrance = form.entrance.value.trim();
+    const first = street.split(" ")[0].replace(/\.+$/, "").toLowerCase();
+    if (street && house && !types.includes(first)) street = "ул. " + street;
+    let a = street;
+    if (house) a += " д. " + house;
+    if (entrance) a += ", под " + entrance;
+    document.getElementById("preview").textContent = a.trim() || "—";
+  }
+  form.addEventListener("input", preview);
+  preview();
+
+  // Примечание к дому: подтягиваем, когда ввели улицу и дом (если его ещё не правили руками).
+  let houseTimer = null;
+  function loadHouseNote() {
+    clearTimeout(houseTimer);
+    houseTimer = setTimeout(async () => {
+      if (form.house_note.value.trim() !== form.house_note_orig.value.trim()) return;
+      const street = form.street.value.trim(), house = form.house.value.trim();
+      let note = "";
+      if (street && house) {
+        try {
+          const r = await fetch("{{ url_for('house_note_view') }}?street=" + encodeURIComponent(street) + "&house=" + encodeURIComponent(house));
+          note = (await r.json()).note;
+        } catch (e) { return; }
+      }
+      form.house_note.value = note;
+      form.house_note_orig.value = note;
+    }, 300);
+  }
+  form.street.addEventListener("input", loadHouseNote);
+  form.house.addEventListener("input", loadHouseNote);
+</script>
+{% endblock %}

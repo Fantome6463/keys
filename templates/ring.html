@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% from "_rings.html" import ring_list with context %}
+{% block content %}
+<p><a href="javascript:history.back()">← назад</a></p>
+{{ ring_list(rings, true) }}
+{% endblock %}

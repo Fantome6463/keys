@@ -1,0 +1,45 @@
+{# Кольцо: номера на кольце по порядку, у каждого адрес, примечание и ящик. #}
+{% macro ring_url(g) %}{{ url_for('ring_view', cabinet=g.cabinet_id or 'none', ring=g.ring) }}{% endmacro %}
+
+{% macro ring_list(rings, opened) %}
+<div class="rings">
+  {% for g in rings %}
+  <details class="card ring" {% if opened %}open{% endif %}>
+    <summary>
+      <span class="ring-badge">{% if g.ring %}{{ g.ring }} кольцо{% else %}Без кольца{% endif %}</span>
+      <span class="muted small">
+        {%- if g.cabinet_id %}{{ g.cabinet_number }}{% if g.cabinet_name %} ({{ g.cabinet_name }}){% endif %}{% else %}не в шкафу{% endif %}
+        · ключей: {{ g['keys']|length }}
+      </span>
+    </summary>
+    <div class="ring-items">
+      {% for k in g.lines %}
+      {% if k.empty %}
+      <div class="ring-item empty"><span class="pos">{{ k.ring_pos }}</span> пусто</div>
+      {% else %}
+      <div class="ring-item">
+        <span class="pos">{{ k.ring_pos or '—' }}</span>
+        <div class="body">
+          <a class="addr-line" href="{{ url_for('key_view', kid=k.id) }}">{{ k.address }}</a>
+          <div class="chips">
+            {%- if k.box %}<span class="box">ящик {{ k.box }}</span>{% endif %}
+            {%- if k.floor %}<span class="box">этаж {{ k.floor }}</span>{% endif %}
+            {%- if k.ups %}<span class="flag {{ 'yes' if k.ups == 'да' else 'no' }}">ИБП: {{ k.ups }}</span>{% endif %}
+            {%- if k.electron %}<span class="flag {{ 'yes' if k.electron == 'да' else 'no' }}">Электрон: {{ k.electron }}</span>{% endif %}
+          </div>
+          {% if k.info %}<div class="comment">{{ k.info|phones }}</div>{% endif %}
+          {% if k.house_note %}<div class="comment house-line">дом: {{ k.house_note|phones }}</div>{% endif %}
+        </div>
+        {% if user.is_admin %}<a class="edit" href="{{ url_for('key_edit', kid=k.id) }}" title="Изменить">✎</a>
+        {% else %}<a class="edit" href="{{ url_for('key_note', kid=k.id, back=request.full_path|replace('partial=1&', '')) }}" title="Изменить примечание, ИБП, Электрон">✎</a>{% endif %}
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% if user.is_admin %}
+    <a class="ring-add" href="{{ url_for('key_edit', cabinet=g.cabinet_id or 'none', ring=g.ring, ring_pos=g.next_pos, box=g.next_box) }}">+ ключ на это кольцо</a>
+    {% endif %}
+  </details>
+  {% endfor %}
+</div>
+{% endmacro %}

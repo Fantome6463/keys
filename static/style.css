@@ -1,0 +1,210 @@
+/* Журнал ключей. Основной цвет — градиент индиго -> синий -> бирюзовый (как у окна управления). */
+:root {
+  --grad: linear-gradient(135deg, #6366f1 0%, #2563eb 50%, #0d9488 100%);
+  --grad-soft: linear-gradient(135deg, rgba(99, 102, 241, .12), rgba(13, 148, 136, .12));
+  --bg: #f3f5fb;
+  --bg-glow: radial-gradient(1200px 500px at 0% -10%, rgba(99, 102, 241, .16), transparent 60%),
+             radial-gradient(900px 500px at 110% 0%, rgba(13, 148, 136, .14), transparent 60%);
+  --card: #ffffff; --tile: #f1f3fb; --text: #161a2b; --muted: #687087;
+  --accent: #4f46e5; --accent-2: #0d9488; --border: #e4e7f2;
+  --danger: #e11d48; --ok: #059669;
+  --shadow: 0 1px 2px rgba(22, 26, 43, .04), 0 8px 24px rgba(37, 50, 120, .08);
+  --radius: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c1020;
+    --bg-glow: radial-gradient(1000px 500px at 0% -10%, rgba(99, 102, 241, .25), transparent 60%),
+               radial-gradient(800px 500px at 110% 0%, rgba(13, 148, 136, .2), transparent 60%);
+    --card: #161b2e; --tile: #1f2640; --text: #e9ecf7; --muted: #9aa3bf;
+    --accent: #818cf8; --accent-2: #2dd4bf; --border: #273050;
+    --danger: #fb7185; --ok: #34d399;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .35);
+  }
+}
+
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body { margin: 0; min-height: 100vh; background: var(--bg-glow), var(--bg); background-attachment: fixed;
+       color: var(--text); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--accent); text-decoration: none; }
+main { max-width: 980px; margin: 0 auto; padding: 18px 16px 40px; }
+h1 { font-size: 1.45rem; margin: 0 0 14px; }
+h2 { font-size: 1.1rem; margin: 26px 0 12px; }
+.muted { color: var(--muted); }
+.small { font-size: .85rem; }
+
+/* ---------- шапка ---------- */
+.top { background: var(--grad); color: #fff; box-shadow: 0 6px 24px rgba(37, 99, 235, .25); }
+.top-inner { max-width: 980px; margin: 0 auto; padding: 12px 16px; display: flex; flex-wrap: wrap;
+             gap: 10px 16px; align-items: center; justify-content: space-between; }
+.brand { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 700; font-size: 1.1rem; }
+.brand .logo { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px;
+               background: rgba(255, 255, 255, .2); }
+.top nav { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.top nav a, .top nav button.link { color: #fff; padding: 6px 12px; border-radius: 999px; font-size: .92rem;
+               background: rgba(255, 255, 255, .14); }
+.top nav a:hover, .top nav button.link:hover { background: rgba(255, 255, 255, .26); }
+
+/* ---------- карточки, формы, кнопки ---------- */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+        padding: 16px; box-shadow: var(--shadow); }
+.narrow { max-width: 500px; margin: 24px auto; }
+label { display: block; margin: 0 0 14px; font-size: .88rem; color: var(--muted); }
+label small { font-size: .8rem; }
+label.check { display: flex; gap: 8px; align-items: center; color: var(--text); }
+input, select, textarea { width: 100%; margin-top: 5px; padding: 11px 12px; font: inherit; color: var(--text);
+  background: var(--tile); border: 1px solid transparent; border-radius: 12px; outline: none;
+  transition: border-color .15s, box-shadow .15s, background .15s; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); background: var(--card);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, .18); }
+input[type=checkbox] { width: auto; margin: 0; accent-color: var(--accent); }
+button { padding: 11px 18px; font: inherit; font-weight: 600; border: 0; border-radius: 12px; cursor: pointer;
+         background: var(--grad); color: #fff; box-shadow: 0 4px 14px rgba(37, 99, 235, .3);
+         transition: transform .1s, box-shadow .15s, filter .15s; }
+button:hover { filter: brightness(1.06); box-shadow: 0 6px 18px rgba(37, 99, 235, .38); }
+button:active { transform: translateY(1px); }
+button.secondary { background: var(--tile); color: var(--text); box-shadow: none; }
+button.link { background: none; color: var(--accent); padding: 0; box-shadow: none; font-weight: 500; }
+.danger { color: var(--danger) !important; }
+form.inline { display: inline; }
+form.inline input { width: auto; margin: 0 6px 0 0; padding: 7px 10px; }
+.row { display: flex; gap: 12px; } .row label { flex: 1; }
+.preview { margin: -4px 0 14px; padding: 10px 12px; border-radius: 12px; background: var(--grad-soft); }
+.flash { padding: 11px 14px; border-radius: 12px; margin-bottom: 14px; background: var(--card);
+         border: 1px solid var(--border); border-left: 4px solid var(--accent); box-shadow: var(--shadow); }
+.flash.error { border-left-color: var(--danger); } .flash.ok { border-left-color: var(--ok); }
+table { border-collapse: collapse; width: 100%; }
+table.list { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+table.list td, table.list th { padding: 10px; border-bottom: 1px solid var(--border); text-align: left; }
+
+/* ---------- вход ---------- */
+.login-page { min-height: 100vh; display: grid; place-items: center; padding: 16px; background: var(--grad); }
+.login-page main { width: 100%; padding: 0; }
+.login-page .card { margin: 0 auto; padding: 26px; }
+.login-page .logo { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px;
+                    background: var(--grad); color: #fff; margin-bottom: 14px; }
+.login-page button { width: 100%; margin-top: 4px; }
+
+/* ---------- поиск ---------- */
+.search-form { padding: 16px; }
+.search { display: flex; gap: 8px; }
+.search input { margin: 0; font-size: 1.1rem; padding: 13px 14px; }
+.search-box { position: relative; flex: 1; }
+.search-box input { padding-right: 46px; }
+.search-box input::-webkit-search-cancel-button { -webkit-appearance: none; }
+.search .clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px;
+                 padding: 0; border-radius: 50%; background: var(--border); color: var(--text); box-shadow: none;
+                 font-size: 1.35rem; line-height: 1; }
+.search .clear[hidden] { display: none; }
+.hint { font-size: .84rem; margin: 10px 2px 0; }
+
+/* ---------- карточка ключа ---------- */
+.results { display: grid; gap: 12px; }
+.key { position: relative; overflow: hidden; padding-left: 20px; }
+.key::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--grad); }
+.key .addr { font-size: 1.18rem; font-weight: 700; margin-bottom: 10px; }
+.where { display: flex; flex-wrap: wrap; gap: 8px; }
+.where span, .where .ring-link { display: flex; flex-direction: column; min-width: 92px; padding: 9px 14px;
+              background: var(--tile); border-radius: 12px; color: var(--text); }
+.where small { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; }
+.where b { font-size: 1.3rem; }
+.where em { font-size: .84rem; font-style: normal; opacity: .85; }
+.where .cab-tile { background: var(--grad); color: #fff; }
+.where .cab-tile small { color: rgba(255, 255, 255, .8); }
+.where .ring-link { background: var(--grad-soft); border: 1px solid rgba(99, 102, 241, .35); }
+.where .ring-link small { color: var(--accent); }
+.where .ring-link:hover { border-color: var(--accent); }
+.where .elsewhere { flex: 1 1 100%; background: var(--grad-soft); border-left: 4px solid var(--accent-2); }
+.where .elsewhere b { font-size: 1.05rem; font-weight: 600; white-space: pre-wrap; }
+.comment { white-space: pre-wrap; }
+.info { margin-top: 10px; padding: 9px 12px; border-radius: 12px; background: var(--tile); }
+.actions { margin-top: 10px; display: flex; gap: 16px; font-size: .9rem; }
+
+/* ---------- кольца ---------- */
+.rings { display: grid; gap: 12px; }
+.ring { padding: 0; overflow: hidden; }
+.ring summary { list-style: none; cursor: pointer; padding: 14px 16px; display: flex; flex-wrap: wrap;
+                align-items: center; gap: 6px 12px; }
+.ring summary::-webkit-details-marker { display: none; }
+.ring summary::after { content: "▾"; margin-left: auto; color: var(--muted); transition: transform .15s; }
+.ring:not([open]) summary::after { transform: rotate(-90deg); }
+.ring-badge { padding: 5px 12px; border-radius: 999px; background: var(--grad); color: #fff; font-weight: 700; }
+.ring-items { display: grid; gap: 8px; padding: 0 12px 12px; }
+.ring-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--tile); }
+.ring-item .pos { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
+                  background: var(--grad); color: #fff; font-weight: 700; }
+.ring-item .body { flex: 1; min-width: 0; }
+.ring-item .addr-line { font-weight: 600; }
+.ring-item .comment { color: var(--muted); font-size: .86rem; }
+.ring-item .box { display: inline-block; margin: 4px 0 2px; padding: 2px 10px; border-radius: 999px;
+                  background: var(--card); border: 1px solid var(--border); font-weight: 600; font-size: .84rem; }
+.ring-item .edit { flex: none; color: var(--muted); }
+.ring-item.empty { background: none; border: 1px dashed var(--border); padding: 6px 12px; color: var(--muted); }
+.ring-item.empty .pos { width: 26px; height: 26px; background: var(--tile); color: var(--muted); font-size: .85rem; }
+.ring-add { display: inline-block; margin: 0 16px 14px; font-size: .9rem; }
+
+/* ---------- шкафы ---------- */
+.cabinets { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.cab { transition: transform .15s, box-shadow .15s; }
+.cab:hover { transform: translateY(-2px); }
+.cab > a { display: flex; gap: 12px; align-items: center; color: var(--text); }
+.cab .count { flex: none; display: grid; place-items: center; min-width: 44px; height: 44px; padding: 0 8px;
+              border-radius: 13px; background: var(--grad); color: #fff; font-weight: 700; }
+.cab .name { display: block; font-size: .86rem; }
+.cab.active { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99, 102, 241, .25), var(--shadow); }
+
+@media (max-width: 600px) {
+  .row:not(.pair) { flex-direction: column; gap: 0; }
+  table.list { display: block; overflow-x: auto; }
+  .search button[type=submit], .search > button { padding: 11px 14px; }
+}
+
+/* ---------- ключ: ссылка, отметки, страница ключа ---------- */
+.key a.addr { display: block; color: var(--text); }
+.key a.addr:hover { color: var(--accent); }
+.key .addr .open { color: var(--accent); font-weight: 400; }
+.key.full .addr { font-size: 1.5rem; margin-bottom: 14px; }
+.key.full .where b { font-size: 1.6rem; }
+.key.full .info { font-size: 1.05rem; }
+.flags, .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.flags { margin-top: 10px; }
+.chips { margin: 4px 0 2px; }
+.chips .box { margin: 0; }
+.flag { padding: 3px 11px; border-radius: 999px; font-size: .84rem; font-weight: 600; }
+.flag.yes { background: rgba(5, 150, 105, .14); color: var(--ok); }
+.flag.no { background: rgba(225, 29, 72, .1); color: var(--danger); }
+.ring-item a.addr-line { display: block; color: var(--text); }
+.ring-item a.addr-line:hover { color: var(--accent); }
+
+/* ---------- выбор «не выбрано / да / нет» ---------- */
+.seg { flex: 1; border: 0; margin: 0 0 14px; padding: 0; min-width: 0; }
+.seg legend { padding: 0; margin-bottom: 5px; font-size: .88rem; color: var(--muted); }
+.seg .opts { display: flex; gap: 4px; padding: 3px; border-radius: 12px; background: var(--tile); }
+.seg label { flex: 1; margin: 0; }
+.seg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.seg span { display: block; padding: 8px 4px; border-radius: 9px; text-align: center; white-space: nowrap;
+            color: var(--text); font-size: .88rem; cursor: pointer; }
+.seg input:checked + span { background: var(--grad); color: #fff; }
+.seg input:focus-visible + span { box-shadow: 0 0 0 3px rgba(99, 102, 241, .35); }
+
+/* ---------- импорт ---------- */
+.import-list { display: grid; gap: 8px; margin-top: 16px; }
+.import-row { display: flex; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--card);
+              border: 1px solid var(--border); }
+.import-row .pos { flex: none; min-width: 52px; height: 30px; padding: 0 8px; display: grid; place-items: center;
+                   border-radius: 999px; background: var(--grad); color: #fff; font-weight: 700; font-size: .85rem; }
+.import-row.skip { opacity: .55; }
+.import-row .warn { color: #b45309; font-weight: 600; }
+button[disabled] { opacity: .5; cursor: not-allowed; }
+
+/* примечание к дому - общее для всех подъездов */
+.info.house { border-left: 4px solid var(--accent-2); background: var(--grad-soft); }
+.info.house small { display: block; color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; }
+.ring-item .house-line { color: var(--accent-2); }
+
+/* формы: блоки с заголовками и кнопки внизу */
+h2.section { font-size: .78rem; text-transform: uppercase; letter-spacing: .07em; color: var(--accent);
+             margin: 22px 0 10px; padding-top: 16px; border-top: 1px solid var(--border); }
+form h1 + input + h2.section, form h1 + h2.section { border-top: 0; padding-top: 0; margin-top: 6px; }
+.form-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 8px; }

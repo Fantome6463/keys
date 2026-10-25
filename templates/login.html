@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Вход — Журнал ключей{% endblock %}
+{% block body_class %}login-page{% endblock %}
+{% block content %}
+<form method="post" class="card narrow">
+  <div class="logo"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M16 7l3 3M14 9l2 2"/></svg></div>
+  <h1>Журнал ключей</h1>
+  <p class="muted" style="margin-top:-8px">Войдите, чтобы найти ключ</p>
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <label>Логин <input name="username" autocomplete="username" required autofocus></label>
+  <label>Пароль <input name="password" type="password" autocomplete="current-password" required></label>
+  <button>Войти</button>
+</form>
+{% endblock %}

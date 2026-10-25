@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% from "_key.html" import key_card with context %}
+{% block title %}{{ k.address }} — Журнал ключей{% endblock %}
+{% block content %}
+<p><a href="javascript:history.back()">← назад</a></p>
+{{ key_card(k, true) }}
+{% endblock %}

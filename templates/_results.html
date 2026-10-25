@@ -1,0 +1,17 @@
+{# Результаты поиска - и на странице, и для живого поиска (подставляются, пока печатаешь). #}
+{% from "_rings.html" import ring_list with context %}
+{% from "_key.html" import key_card with context %}
+  <h2>
+    {% if cabinet_id %}{% for c in cabinets if c.id == cabinet_id %}Шкаф {{ c.number }} · {% endfor %}{% endif %}Найдено: {{ results|length }}{% if results|length >= 300 %} (показаны первые 300 — уточните поиск){% endif %}
+  </h2>
+  {% if rings %}
+  {{ ring_list(rings, not cabinet_id or rings|length == 1) }}
+  {% elif results %}
+  <div class="results">
+    {% for k in results %}
+    {{ key_card(k) }}
+    {% endfor %}
+  </div>
+  {% else %}
+    <p class="muted">Ничего не найдено. Попробуйте написать часть адреса, например только улицу.</p>
+  {% endif %}

@@ -1,5 +1,5 @@
 {# Карточка ключа. full - страница одного ключа (всё крупно), иначе - строка в результатах поиска. #}
-{% from "_rings.html" import ring_url %}
+{% from "_rings.html" import ring_url, wall_url %}
 
 {% macro flag(name, value) -%}
 {% if value %}<span class="flag {{ 'yes' if value == 'да' else 'no' }}">{{ name }}: {{ value }}</span>{% endif %}
@@ -15,7 +15,13 @@
     {% else %}
     <div class="tag-head away"><span class="tag-label">Не в шкафу — хранится</span><b>{{ k.info|phones if k.info else 'место не указано' }}</b></div>
     {% endif %}
-    {% if k.ring or k.ring_pos or k.box or k.cabinet_id %}
+    {% if k.cabinet_kind == 'walls' %}
+    <div class="tag-body walls">
+      <a class="tag-cell link" href="{{ wall_url(k) }}" title="Показать всю стенку"><span>Стенка</span><b>{{ k.wall or '—' }} <em>›</em></b><i>вся стенка ›</i></a>
+      <div class="tag-cell nowrap"><span>Сторона</span><b>{{ k.side|capitalize if k.side else '—' }}</b></div>
+      <div class="tag-cell nowrap"><span>Ряд · место</span><b>{{ k.wrow or '—' }} · {{ k.wcol or '—' }}</b></div>
+    </div>
+    {% elif k.ring or k.ring_pos or k.box or k.cabinet_id %}
     <div class="tag-body">
       {% if k.ring %}<a class="tag-cell link" href="{{ ring_url(k) }}" title="Показать всё кольцо"><span>Кольцо</span><b>{{ k.ring }} <em>›</em></b><i>всё кольцо ›</i></a>
       {% else %}<div class="tag-cell"><span>Кольцо</span><b>—</b></div>{% endif %}
@@ -24,7 +30,8 @@
     </div>
     {% endif %}
   </div>
-  {% if k.floor or k.ups or k.electron %}<div class="flags">
+  {% if k.floor or k.ups or k.electron or (k.cabinet_kind == 'walls' and k.box) %}<div class="flags">
+    {%- if k.cabinet_kind == 'walls' and k.box %}<span class="flag plain">Ящик {{ k.box }}</span>{% endif %}
     {%- if k.floor %}<span class="flag plain">Этаж {{ k.floor }}</span>{% endif %}{{ flag('ИБП', k.ups) }}{{ flag('Электрон', k.electron) }}</div>{% endif %}
   {% if k.info and k.cabinet_id %}<div class="info comment">{{ k.info|phones }}</div>{% endif %}
   {% if k.house_note %}<div class="info comment house"><small>Для всего дома</small>{{ k.house_note|phones }}</div>{% endif %}

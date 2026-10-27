@@ -177,6 +177,9 @@ form h1 + input + h2.section, form h1 + h2.section { margin-top: 4px; }
 /* ящику больше места: код «Д-052-40-1» не должен переноситься */
 .tag-body { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, .8fr) minmax(0, 1.4fr); background: var(--card); }
 .tag-cell.box b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tag-body.walls { grid-template-columns: minmax(0, .8fr) minmax(0, 1.15fr) minmax(0, 1.05fr); }
+.tag-cell.nowrap b { white-space: nowrap; }
+@media (max-width: 600px) { .tag-cell.nowrap b { font-size: 1.125rem; } }
 .tag-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 10px 14px; color: var(--text); }
 .tag-cell + .tag-cell { border-left: 1px solid var(--line); }
 .tag-cell span { font-size: .8125rem; color: var(--text-3); }
@@ -244,6 +247,12 @@ form h1 + input + h2.section, form h1 + h2.section { margin-top: 4px; }
                         border-radius: 999px; font-size: .8125rem; font-weight: 600; }
 .ring-add { display: block; padding: 12px 16px; border-top: 1px solid var(--line); font-weight: 600; }
 .ring-add:hover { background: var(--hover); }
+
+.side-title { padding: 10px 16px 4px; font-size: .8125rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+              color: var(--accent); border-top: 1px solid var(--line); }
+.ring-items > .side-title:first-child { border-top: 0; }
+.side-title + .ring-item { border-top: 0; }
+[hidden] { display: none !important; }
 
 /* ---------- шкафы ---------- */
 .cabinets { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }

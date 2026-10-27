@@ -1,43 +1,61 @@
-{# Кольцо: номера на кольце по порядку, у каждого адрес, примечание и ящик. #}
+{# Кольца (шкафы с кольцами) и стенки (шкафы с выдвижными стенками): ключи по порядку. #}
 {% macro ring_url(g) %}{{ url_for('ring_view', cabinet=g.cabinet_id or 'none', ring=g.ring) }}{% endmacro %}
+{% macro wall_url(g) %}{{ url_for('wall_view', cabinet=g.cabinet_id, wall=g.wall) }}{% endmacro %}
+
+{% macro key_line(k, label) %}
+<div class="ring-item">
+  <span class="pos">{{ label }}</span>
+  <div class="body">
+    <a class="addr-line" href="{{ url_for('key_view', kid=k.id) }}">{{ k.address }}</a>
+    <div class="chips">
+      {%- if k.wall %}<span class="box">ряд {{ k.wrow or '—' }} · место {{ k.wcol or '—' }}</span>{% endif %}
+      {%- if k.box %}<span class="box">ящик {{ k.box }}</span>{% endif %}
+      {%- if k.floor %}<span class="box">этаж {{ k.floor }}</span>{% endif %}
+      {%- if k.ups %}<span class="flag {{ 'yes' if k.ups == 'да' else 'no' }}">ИБП: {{ k.ups }}</span>{% endif %}
+      {%- if k.electron %}<span class="flag {{ 'yes' if k.electron == 'да' else 'no' }}">Электрон: {{ k.electron }}</span>{% endif %}
+    </div>
+    {% if k.info %}<div class="comment">{{ k.info|phones }}</div>{% endif %}
+    {% if k.house_note %}<div class="comment house-line">дом: {{ k.house_note|phones }}</div>{% endif %}
+  </div>
+  {% if user.is_admin %}<a class="edit" href="{{ url_for('key_edit', kid=k.id) }}" title="Изменить">✎</a>
+  {% else %}<a class="edit" href="{{ url_for('key_note', kid=k.id, back=request.full_path|replace('partial=1&', '')) }}" title="Изменить примечание, ИБП, Электрон">✎</a>{% endif %}
+</div>
+{% endmacro %}
 
 {% macro ring_list(rings, opened, show_cabinet=true) %}
 <div class="rings">
   {% for g in rings %}
   <details class="card ring" {% if opened %}open{% endif %}>
     <summary>
-      <span class="ring-badge">{% if g.ring %}{{ g.ring }} кольцо{% else %}Без кольца{% endif %}</span>
+      <span class="ring-badge">{% if g.kind == 'walls' %}Стенка {{ g.wall or '—' }}{% elif g.ring %}{{ g.ring }} кольцо{% else %}Без кольца{% endif %}</span>
       <span class="muted small">
         {%- if show_cabinet %}{% if g.cabinet_id %}{{ g.cabinet_number }}{% if g.cabinet_name %} ({{ g.cabinet_name }}){% endif %}{% else %}не в шкафу{% endif %} · {% endif -%}
-        ключей: {{ g['keys']|length }}
+        {% if g['keys'] %}ключей: {{ g['keys']|length }}{% else %}пусто{% endif %}
       </span>
     </summary>
     <div class="ring-items">
-      {% for k in g.lines %}
-      {% if k.empty %}
-      <div class="ring-item empty"><span class="pos">{{ k.ring_pos }}</span> пусто</div>
+      {% if g.kind == 'walls' %}
+        {% for side in ['левая', 'правая', ''] %}
+          {% set on_side = g.lines|selectattr('side', 'equalto', side)|list %}
+          {% if on_side %}
+          <div class="side-title">{% if side %}{{ side|capitalize }} сторона{% else %}Сторона не указана{% endif %}</div>
+          {% for k in on_side %}{{ key_line(k, side[:1]|upper or '?') }}{% endfor %}
+          {% endif %}
+        {% endfor %}
+        {% if not g.lines %}<div class="ring-item empty">На этой стенке ключей пока нет</div>{% endif %}
       {% else %}
-      <div class="ring-item">
-        <span class="pos">{{ k.ring_pos or '—' }}</span>
-        <div class="body">
-          <a class="addr-line" href="{{ url_for('key_view', kid=k.id) }}">{{ k.address }}</a>
-          <div class="chips">
-            {%- if k.box %}<span class="box">ящик {{ k.box }}</span>{% endif %}
-            {%- if k.floor %}<span class="box">этаж {{ k.floor }}</span>{% endif %}
-            {%- if k.ups %}<span class="flag {{ 'yes' if k.ups == 'да' else 'no' }}">ИБП: {{ k.ups }}</span>{% endif %}
-            {%- if k.electron %}<span class="flag {{ 'yes' if k.electron == 'да' else 'no' }}">Электрон: {{ k.electron }}</span>{% endif %}
-          </div>
-          {% if k.info %}<div class="comment">{{ k.info|phones }}</div>{% endif %}
-          {% if k.house_note %}<div class="comment house-line">дом: {{ k.house_note|phones }}</div>{% endif %}
-        </div>
-        {% if user.is_admin %}<a class="edit" href="{{ url_for('key_edit', kid=k.id) }}" title="Изменить">✎</a>
-        {% else %}<a class="edit" href="{{ url_for('key_note', kid=k.id, back=request.full_path|replace('partial=1&', '')) }}" title="Изменить примечание, ИБП, Электрон">✎</a>{% endif %}
-      </div>
+        {% for k in g.lines %}
+          {% if k.empty %}<div class="ring-item empty"><span class="pos">{{ k.ring_pos }}</span> пусто</div>
+          {% else %}{{ key_line(k, k.ring_pos or '—') }}{% endif %}
+        {% endfor %}
       {% endif %}
-      {% endfor %}
     </div>
     {% if user.is_admin %}
-    <a class="ring-add" href="{{ url_for('key_edit', cabinet=g.cabinet_id or 'none', ring=g.ring, ring_pos=g.next_pos, box=g.next_box) }}">+ ключ на это кольцо</a>
+      {% if g.kind == 'walls' %}
+      <a class="ring-add" href="{{ url_for('key_edit', cabinet=g.cabinet_id, wall=g.wall) }}">+ ключ на эту стенку</a>
+      {% else %}
+      <a class="ring-add" href="{{ url_for('key_edit', cabinet=g.cabinet_id or 'none', ring=g.ring, ring_pos=g.next_pos, box=g.next_box) }}">+ ключ на это кольцо</a>
+      {% endif %}
     {% endif %}
   </details>
   {% endfor %}

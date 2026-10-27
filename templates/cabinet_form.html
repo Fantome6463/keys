@@ -7,6 +7,15 @@
                             placeholder="FTTB 0"></label>
   <label>Где стоит (необязательно) <input name="name" value="{{ cab.name if cab else '' }}"
                                          placeholder="например: коридор, 2 этаж"></label>
+  {% set kind = cab.kind if cab else 'rings' %}
+  <fieldset class="seg"><legend>Как висят ключи</legend>
+    <div class="opts">
+      <label><input type="radio" name="kind" value="rings" {% if kind != 'walls' %}checked{% endif %}><span>на кольцах</span></label>
+      <label><input type="radio" name="kind" value="walls" {% if kind == 'walls' %}checked{% endif %}><span>на выдвижных стенках</span></label>
+    </div>
+  </fieldset>
+  <label>Сколько стенок <small>— только для шкафа со стенками</small>
+    <input name="walls" type="number" min="1" max="99" value="{{ cab.walls if cab else 16 }}" inputmode="numeric"></label>
   <button>Сохранить</button>
   <a href="{{ url_for('index') }}">Отмена</a>
 </form>

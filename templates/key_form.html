@@ -15,15 +15,29 @@
     <select name="cabinet_id">
       <option value="" {% if sel is none %}selected{% endif %}>Не в шкафу (где лежит — напишите в примечании)</option>
       {% for c in cabinets %}
-        <option value="{{ c.id }}" {% if c.id == sel %}selected{% endif %}>{{ c.number }}{% if c.name %} — {{ c.name }}{% endif %}</option>
+        <option value="{{ c.id }}" data-kind="{{ c.kind }}" {% if c.id == sel %}selected{% endif %}>{{ c.number }}{% if c.name %} — {{ c.name }}{% endif %}</option>
       {% endfor %}
     </select>
   </label>
-  <div class="row pair">
+  <div class="row pair" data-for="rings">
     <label>Кольцо <input name="ring" value="{{ val('ring') }}" inputmode="numeric"></label>
     <label>№ на кольце <input name="ring_pos" value="{{ val('ring_pos') }}" inputmode="numeric"></label>
   </div>
-  <label>№ ящика <input name="box" value="{{ val('box') }}" placeholder="Д-007-10"></label>
+  <div data-for="walls">
+    <div class="row pair">
+      <label>Стенка <input name="wall" value="{{ val('wall') }}" inputmode="numeric" placeholder="1–16"></label>
+      <fieldset class="seg"><legend>Сторона</legend>
+        <div class="opts">{% for v in ['левая', 'правая'] %}
+        <label><input type="radio" name="side" value="{{ v }}" {% if val('side') == v %}checked{% endif %}><span>{{ v }}</span></label>
+        {% endfor %}</div>
+      </fieldset>
+    </div>
+    <div class="row pair">
+      <label>Ряд <input name="wrow" value="{{ val('wrow') }}" inputmode="numeric"></label>
+      <label>Место <input name="wcol" value="{{ val('wcol') }}" inputmode="numeric"></label>
+    </div>
+  </div>
+  <label>№ ящика <small data-for="walls">— если есть</small> <input name="box" value="{{ val('box') }}" placeholder="Д-007-10"></label>
 
   <h2 class="section">Адрес</h2>
   <label>Улица <input name="street" value="{{ val('street') }}" list="streets" required
@@ -69,6 +83,15 @@
   }
   form.addEventListener("input", preview);
   preview();
+
+  // Шкаф с кольцами - поля «Кольцо / №», шкаф со стенками - «Стенка / Сторона / Ряд / Место».
+  function showPlaceFields() {
+    const opt = form.cabinet_id.selectedOptions[0];
+    const kind = opt && opt.dataset.kind === "walls" ? "walls" : "rings";
+    form.querySelectorAll("[data-for]").forEach(el => { el.hidden = el.dataset.for !== kind; });
+  }
+  form.cabinet_id.addEventListener("change", showPlaceFields);
+  showPlaceFields();
 
   // Примечание к дому: подтягиваем, когда ввели улицу и дом (если его ещё не правили руками).
   let houseTimer = null;

@@ -52,7 +52,9 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS cabinets (
     id INTEGER PRIMARY KEY,
     number TEXT NOT NULL,
-    name TEXT NOT NULL DEFAULT ''
+    name TEXT NOT NULL DEFAULT '',
+    kind TEXT NOT NULL DEFAULT 'rings',  -- 'rings': ключи на кольцах; 'walls': выдвижные стенки
+    walls INTEGER NOT NULL DEFAULT 16    -- сколько стенок (для 'walls')
 );
 CREATE TABLE IF NOT EXISTS keys (
     id INTEGER PRIMARY KEY,
@@ -67,7 +69,11 @@ CREATE TABLE IF NOT EXISTS keys (
     floor TEXT NOT NULL DEFAULT '',
     ups TEXT NOT NULL DEFAULT '',       -- ИБП: 'да', 'нет' или '' (не выбрано - не показываем)
     electron TEXT NOT NULL DEFAULT '',  -- Электрон: так же
-    info TEXT NOT NULL DEFAULT ''
+    info TEXT NOT NULL DEFAULT '',
+    wall TEXT NOT NULL DEFAULT '',      -- шкаф со стенками: номер стенки,
+    side TEXT NOT NULL DEFAULT '',      -- сторона ('левая' / 'правая'),
+    wrow TEXT NOT NULL DEFAULT '',      -- ряд
+    wcol TEXT NOT NULL DEFAULT ''       -- и место в ряду
 );
 CREATE INDEX IF NOT EXISTS keys_cabinet ON keys(cabinet_id);
 -- примечание к дому: одно на все ключи этого дома (подъезды), например телефон УК
@@ -136,6 +142,20 @@ def build_search(query):
             field = "box"
         elif word in ("этаж", "этаже"):
             field = "floor"
+        elif word in ("стенка", "стенке", "стенки", "стенку", "ст"):
+            field = "wall"
+        elif word in ("ряд", "ряду", "ряда"):
+            field = "wrow"
+        elif word in ("место", "месте", "места"):
+            field = "wcol"
+        elif word in ("левая", "левой", "лев", "правая", "правой", "прав"):
+            where.append("k.side = ?")
+            params.append(norm_side(word))
+            i += 1
+            continue
+        elif word in ("сторона", "стороне"):
+            i += 1
+            continue
         elif word == "номер":
             field = "ring_pos"
             while i + 1 < len(tokens) and tokens[i + 1] in ("на",) + RING_WORDS:
@@ -260,6 +280,13 @@ def split_floor(info):
 
 
 YES_NO = ("да", "нет")
+SIDES = ("левая", "правая")
+
+
+def norm_side(value):
+    """«Л», «лев.», «левая» -> «левая»; непонятное -> ''."""
+    v = (value or "").strip().lower()
+    return "левая" if v.startswith("л") else "правая" if v.startswith("п") else ""
 
 
 def make_cabinet_optional(db):
@@ -291,6 +318,13 @@ def init_db():
             for row in db.execute("SELECT id, address FROM keys").fetchall():
                 db.execute("UPDATE keys SET street=?, house=?, entrance=? WHERE id=?",
                            split_address(row["address"]) + (row["id"],))
+        if "wall" not in columns:  # шкафы с выдвижными стенками
+            for col in ("wall", "side", "wrow", "wcol"):
+                db.execute(f"ALTER TABLE keys ADD COLUMN {col} TEXT NOT NULL DEFAULT ''")
+        cab_columns = {r["name"] for r in db.execute("PRAGMA table_info(cabinets)")}
+        if "kind" not in cab_columns:
+            db.execute("ALTER TABLE cabinets ADD COLUMN kind TEXT NOT NULL DEFAULT 'rings'")
+            db.execute("ALTER TABLE cabinets ADD COLUMN walls INTEGER NOT NULL DEFAULT 16")
         if "floor" not in columns:  # этаж, ИБП и электрон - отдельными полями
             for col in ("floor", "ups", "electron"):
                 db.execute(f"ALTER TABLE keys ADD COLUMN {col} TEXT NOT NULL DEFAULT ''")
@@ -421,7 +455,8 @@ def logout():
 # ---------- Поиск ----------
 
 KEY_SELECT = """
-SELECT k.*, c.number AS cabinet_number, c.name AS cabinet_name, h.note AS house_note
+SELECT k.*, c.number AS cabinet_number, c.name AS cabinet_name, c.kind AS cabinet_kind, c.walls AS cabinet_walls,
+       h.note AS house_note
 FROM keys k LEFT JOIN cabinets c ON c.id = k.cabinet_id
 LEFT JOIN houses h ON k.house != '' AND h.street_key = trim(norm(k.street)) AND h.house_key = trim(norm(k.house))
 """
@@ -473,6 +508,38 @@ def next_box(box):
     return box[:m.start(1)] + str(int(m[1]) + 1).zfill(len(m[1])) + m[2]
 
 
+def side_order(side):
+    return SIDES.index(side) if side in SIDES else 2
+
+
+def group_walls(rows, cabinets_all=None):
+    """Ключи шкафов со стенками -> стенки; внутри: сторона, ряд, место.
+    cabinets_all: для открытого шкафа показать все его стенки, даже пустые (удобно заполнять)."""
+    groups = {}
+    for r in rows:
+        groups.setdefault((r["cabinet_id"], normalize(r["wall"])), []).append(r)
+    walls = []
+    for keys in groups.values():
+        keys.sort(key=lambda r: (side_order(r["side"]), natural_key(r["wrow"]), natural_key(r["wcol"]), natural_key(r["address"])))
+        first = keys[0]
+        walls.append({"kind": "walls", "cabinet_id": first["cabinet_id"], "cabinet_number": first["cabinet_number"],
+                      "cabinet_name": first["cabinet_name"], "wall": first["wall"], "keys": keys, "lines": keys})
+    for cab in cabinets_all or []:  # пустые стенки 1..N
+        have = {normalize(g["wall"]) for g in walls if g["cabinet_id"] == cab["id"]}
+        for n in range(1, (cab["walls"] or 0) + 1):
+            if normalize(str(n)) not in have:
+                walls.append({"kind": "walls", "cabinet_id": cab["id"], "cabinet_number": cab["number"],
+                              "cabinet_name": cab["name"], "wall": str(n), "keys": [], "lines": []})
+    walls.sort(key=lambda g: (natural_key(g["cabinet_number"]), not g["wall"], natural_key(g["wall"])))
+    return walls
+
+
+def group_places(rows, fill_gaps=False, cabinets_all=None):
+    """Кольца для шкафов с кольцами и стенки для шкафов со стенками - одним списком."""
+    walls = [r for r in rows if r["cabinet_kind"] == "walls"]
+    return group_walls(walls, cabinets_all) + group_rings([r for r in rows if r["cabinet_kind"] != "walls"], fill_gaps)
+
+
 def group_rings(rows, fill_gaps=False):
     """Ключи -> кольца, как в журнале: кольцо = шкаф + номер кольца, ключи по номеру на кольце.
     fill_gaps: показать пропущенные номера (в журнале бывает 1, 3, 4) пустыми строками."""
@@ -489,7 +556,7 @@ def group_rings(rows, fill_gaps=False):
             by_pos = {int(k["ring_pos"]): k for k in keys}
             lines = [by_pos.get(n, {"ring_pos": str(n), "empty": True}) for n in range(1, max(positions) + 1)]
         rings.append({
-            "cabinet_id": first["cabinet_id"], "cabinet_number": first["cabinet_number"],
+            "kind": "rings", "cabinet_id": first["cabinet_id"], "cabinet_number": first["cabinet_number"],
             "cabinet_name": first["cabinet_name"], "ring": first["ring"],
             "keys": keys, "lines": lines,
             "next_pos": max(positions) + 1 if positions else "", "next_box": next_box(last["box"]),
@@ -511,6 +578,20 @@ def ring_view():
     return render_template("ring.html", rings=group_rings(rows, fill_gaps=True))
 
 
+@app.route("/wall")
+@login_required
+def wall_view():
+    """Вся выдвижная стенка: обе стороны, ряды и места."""
+    cabinet = request.args.get("cabinet", type=int)
+    wall = request.args.get("wall", "")
+    db = get_db()
+    cab = db.execute("SELECT * FROM cabinets WHERE id = ?", (cabinet,)).fetchone() or abort(404)
+    rows = db.execute(KEY_SELECT + " WHERE k.cabinet_id = ? AND norm(k.wall) = ?", (cabinet, normalize(wall))).fetchall()
+    groups = group_walls(rows) or [{"kind": "walls", "cabinet_id": cab["id"], "cabinet_number": cab["number"],
+                                    "cabinet_name": cab["name"], "wall": wall, "keys": [], "lines": []}]
+    return render_template("ring.html", rings=groups)
+
+
 @app.route("/")
 @login_required
 def index():
@@ -526,9 +607,12 @@ def index():
         sql = KEY_SELECT + " WHERE " + " AND ".join(where) + " LIMIT 300"
         results = sorted(db.execute(sql, params).fetchall(),
                          key=lambda r: (relevance(r, words), natural_key(r["address"])))
-        # открыли шкаф или искали кольцо - показываем по кольцам
-        if cabinet_id or any(w in RING_WORDS for w in normalize(q).split()):
-            rings = group_rings(results, fill_gaps=bool(cabinet_id and not q))
+        # открыли шкаф или искали кольцо/стенку - показываем по кольцам и стенкам
+        words_q = normalize(q).split()
+        if cabinet_id or any(w in RING_WORDS or w.startswith("стенк") for w in words_q):
+            opened = db.execute("SELECT * FROM cabinets WHERE id = ? AND kind = 'walls'", (cabinet_id,)).fetchall() \
+                if cabinet_id and not q else None
+            rings = group_places(results, fill_gaps=bool(cabinet_id and not q), cabinets_all=opened)
     cabinets = sorted(db.execute(
         "SELECT c.*, COUNT(k.id) AS key_count FROM cabinets c "
         "LEFT JOIN keys k ON k.cabinet_id = c.id GROUP BY c.id"
@@ -560,10 +644,13 @@ def cabinet_edit(cid=None):
         elif same:
             flash(f"Шкаф {number} уже есть.", "error")
         else:
+            kind = "walls" if request.form.get("kind") == "walls" else "rings"
+            walls = max(1, min(request.form.get("walls", 16, type=int) or 16, 99))
             if cab:
-                db.execute("UPDATE cabinets SET number = ?, name = ? WHERE id = ?", (number, name, cid))
+                db.execute("UPDATE cabinets SET number = ?, name = ?, kind = ?, walls = ? WHERE id = ?",
+                           (number, name, kind, walls, cid))
             else:
-                db.execute("INSERT INTO cabinets (number, name) VALUES (?, ?)", (number, name))
+                db.execute("INSERT INTO cabinets (number, name, kind, walls) VALUES (?, ?, ?, ?)", (number, name, kind, walls))
             db.commit()
             flash("Шкаф сохранён.", "ok")
             return redirect(url_for("index"))
@@ -596,7 +683,9 @@ def key_edit(kid=None):
     cabinets = sorted(db.execute("SELECT * FROM cabinets").fetchall(), key=lambda c: natural_key(c["number"]))
     if request.method == "POST":
         f = {k: request.form.get(k, "").strip()
-             for k in ("street", "house", "entrance", "ring", "ring_pos", "box", "floor", "ups", "electron", "info")}
+             for k in ("street", "house", "entrance", "ring", "ring_pos", "box", "floor", "ups", "electron", "info",
+                       "wall", "side", "wrow", "wcol")}
+        f["side"] = norm_side(f["side"])
         for k in ("ups", "electron"):
             if f[k] not in YES_NO:
                 f[k] = ""
@@ -604,24 +693,35 @@ def key_edit(kid=None):
         address = compose_address(f["street"], f["house"], f["entrance"])
         if not any(c["id"] == cabinet_id for c in cabinets):
             cabinet_id = None
+        # у шкафа со стенками - стенка/сторона/ряд/место, у шкафа с кольцами - кольцо/номер
+        kind = next((c["kind"] for c in cabinets if c["id"] == cabinet_id), "rings")
+        if kind == "walls":
+            f["ring"] = f["ring_pos"] = ""
+        else:
+            f["wall"] = f["side"] = f["wrow"] = f["wcol"] = ""
         if not f["street"]:
             flash("Укажите улицу.", "error")
         elif cabinet_id is None and not f["info"]:
             flash("Ключ не в шкафу — напишите в «Примечании», где он хранится.", "error")
         else:
             vals = (cabinet_id, address, f["street"], f["house"], f["entrance"],
-                    f["ring"], f["ring_pos"], f["box"], f["floor"], f["ups"], f["electron"], f["info"])
+                    f["ring"], f["ring_pos"], f["box"], f["floor"], f["ups"], f["electron"], f["info"],
+                    f["wall"], f["side"], f["wrow"], f["wcol"])
             if key:
-                db.execute("UPDATE keys SET cabinet_id=?, address=?, street=?, house=?, entrance=?, ring=?, "
-                           "ring_pos=?, box=?, floor=?, ups=?, electron=?, info=? WHERE id=?", vals + (kid,))
+                db.execute("UPDATE keys SET cabinet_id=?, address=?, street=?, house=?, entrance=?, ring=?, ring_pos=?, "
+                           "box=?, floor=?, ups=?, electron=?, info=?, wall=?, side=?, wrow=?, wcol=? WHERE id=?", vals + (kid,))
             else:
-                db.execute("INSERT INTO keys (cabinet_id, address, street, house, entrance, ring, ring_pos, "
-                           "box, floor, ups, electron, info) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", vals)
+                db.execute("INSERT INTO keys (cabinet_id, address, street, house, entrance, ring, ring_pos, box, floor, "
+                           "ups, electron, info, wall, side, wrow, wcol) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", vals)
             save_house_note_from_form(db, f["street"], f["house"])
             db.commit()
             flash(f"Ключ сохранён: {address}", "ok")
             if request.form.get("another"):
                 # следующая строка журнала: то же кольцо, номер и ящик на один больше, часто та же улица
+                if kind == "walls":  # следующее место в том же ряду
+                    col = str(int(f["wcol"]) + 1) if f["wcol"].isdigit() else ""
+                    return redirect(url_for("key_edit", cabinet=cabinet_id, wall=f["wall"], side=f["side"], wrow=f["wrow"],
+                                            wcol=col, street=f["street"], house=f["house"]))
                 pos = str(int(f["ring_pos"]) + 1) if f["ring_pos"].isdigit() else ""
                 return redirect(url_for("key_edit", cabinet=cabinet_id or "none", ring=f["ring"], ring_pos=pos,
                                         street=f["street"], house=f["house"], box=next_box(f["box"])))
@@ -685,6 +785,7 @@ IMPORT_COLUMNS = [  # поле, как может называться коло�
     ("street", ("улиц",)), ("house", ("дом",)), ("entrance", ("подъезд", "под")),
     ("address", ("адрес",)), ("floor", ("этаж",)), ("box", ("ящик", "№ ящика")),
     ("ups", ("ибп",)), ("electron", ("электрон",)), ("info", ("примеч", "коммент", "инф")),
+    ("wall", ("стенк",)), ("side", ("сторон",)), ("wrow", ("ряд",)), ("wcol", ("место",)),
 ]
 
 
@@ -714,6 +815,7 @@ def read_import(text):
         for f in ("ups", "electron"):
             v[f] = v.get(f, "").lower() if v.get(f, "").lower() in YES_NO else ""
         v["cabinet"], v["cab_name"] = fix_cabinet(v.get("cabinet", ""), v.get("cab_name", ""))
+        v["side"] = norm_side(v.get("side", ""))
         v["line"] = line
         v["address_text"] = compose_address(v.get("street", ""), v.get("house", ""), v.get("entrance", ""))
         result.append(v)
@@ -722,20 +824,24 @@ def read_import(text):
 
 def check_import(db, rows):
     """Пометить каждую строку: добавить / пропустить и почему."""
-    taken = {(normalize(r["number"]), normalize(r["ring"]), normalize(r["ring_pos"]))
-             for r in db.execute("SELECT c.number, k.ring, k.ring_pos FROM keys k JOIN cabinets c ON c.id = k.cabinet_id "
-                                 "WHERE k.ring_pos != ''")}
+    def place_of(cab, r):  # место ключа в шкафу: кольцо+номер или стенка+сторона+ряд+место
+        if r.get("wall"):
+            return (normalize(cab), "стенка", normalize(r["wall"]), r.get("side", ""), normalize(r.get("wrow")), normalize(r.get("wcol")))
+        return (normalize(cab), normalize(r.get("ring")), normalize(r.get("ring_pos"))) if r.get("ring_pos") else None
+    taken = {place_of(r["number"], dict(r)) for r in db.execute(
+        "SELECT c.number, k.ring, k.ring_pos, k.wall, k.side, k.wrow, k.wcol FROM keys k JOIN cabinets c ON c.id = k.cabinet_id")}
+    taken.discard(None)
     for v in rows:
-        place = (normalize(v["cabinet"]), normalize(v.get("ring")), normalize(v.get("ring_pos")))
+        place = place_of(v["cabinet"], v)
         if not v.get("street"):
             v["status"] = "нет адреса"
         elif not v["cabinet"] and not v.get("info"):
             v["status"] = "не указан ни шкаф, ни где хранится"
-        elif v["cabinet"] and v.get("ring_pos") and place in taken:
+        elif v["cabinet"] and place and place in taken:
             v["status"] = "уже есть"
         else:
             v["status"] = ""
-            if v["cabinet"] and v.get("ring_pos"):
+            if v["cabinet"] and place:
                 taken.add(place)
     return rows
 
@@ -774,14 +880,16 @@ def import_keys():
         cab_id = None
         if v["cabinet"]:
             if v["cabinet"] not in cab_ids:
-                cab_ids[v["cabinet"]] = db.execute("INSERT INTO cabinets (number, name) VALUES (?, ?)",
-                                                   (v["cabinet"], v["cab_name"])).lastrowid
+                kind = "walls" if v.get("wall") else "rings"  # есть колонка «стенка» - значит шкаф со стенками
+                cab_ids[v["cabinet"]] = db.execute("INSERT INTO cabinets (number, name, kind) VALUES (?, ?, ?)",
+                                                   (v["cabinet"], v["cab_name"], kind)).lastrowid
             cab_id = cab_ids[v["cabinet"]]
         db.execute("INSERT INTO keys (cabinet_id, address, street, house, entrance, ring, ring_pos, box, floor, "
-                   "ups, electron, info) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                   "ups, electron, info, wall, side, wrow, wcol) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                    (cab_id, v["address_text"], v["street"], v.get("house", ""), v.get("entrance", ""),
                     v.get("ring", ""), v.get("ring_pos", ""), v.get("box", ""), v.get("floor", ""),
-                    v["ups"], v["electron"], v.get("info", "")))
+                    v["ups"], v["electron"], v.get("info", ""),
+                    v.get("wall", ""), v["side"], v.get("wrow", ""), v.get("wcol", "")))
         if v.get("house_note"):
             set_house_note(db, v["street"], v.get("house", ""), v["house_note"])
         added += 1

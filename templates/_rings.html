@@ -1,15 +1,15 @@
 {# Кольцо: номера на кольце по порядку, у каждого адрес, примечание и ящик. #}
 {% macro ring_url(g) %}{{ url_for('ring_view', cabinet=g.cabinet_id or 'none', ring=g.ring) }}{% endmacro %}
 
-{% macro ring_list(rings, opened) %}
+{% macro ring_list(rings, opened, show_cabinet=true) %}
 <div class="rings">
   {% for g in rings %}
   <details class="card ring" {% if opened %}open{% endif %}>
     <summary>
       <span class="ring-badge">{% if g.ring %}{{ g.ring }} кольцо{% else %}Без кольца{% endif %}</span>
       <span class="muted small">
-        {%- if g.cabinet_id %}{{ g.cabinet_number }}{% if g.cabinet_name %} ({{ g.cabinet_name }}){% endif %}{% else %}не в шкафу{% endif %}
-        · ключей: {{ g['keys']|length }}
+        {%- if show_cabinet %}{% if g.cabinet_id %}{{ g.cabinet_number }}{% if g.cabinet_name %} ({{ g.cabinet_name }}){% endif %}{% else %}не в шкафу{% endif %} · {% endif -%}
+        ключей: {{ g['keys']|length }}
       </span>
     </summary>
     <div class="ring-items">

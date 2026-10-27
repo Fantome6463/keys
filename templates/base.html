@@ -19,7 +19,7 @@
       {% endif %}
       <form method="post" action="{{ url_for('logout') }}" class="inline">
         <input type="hidden" name="csrf" value="{{ csrf_token }}">
-        <button class="link" title="Выйти">Выйти · {{ user.username }}</button>
+        <button class="link" title="Вы вошли как {{ user.username }}">Выйти</button>
       </form>
     </nav>
   </div></header>

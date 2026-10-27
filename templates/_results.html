@@ -5,7 +5,7 @@
     {% if cabinet_id %}{% for c in cabinets if c.id == cabinet_id %}Шкаф {{ c.number }} · {% endfor %}{% endif %}Найдено: {{ results|length }}{% if results|length >= 300 %} (показаны первые 300 — уточните поиск){% endif %}
   </h2>
   {% if rings %}
-  {{ ring_list(rings, not cabinet_id or rings|length == 1) }}
+  {{ ring_list(rings, not cabinet_id or rings|length == 1, not cabinet_id) }}
   {% elif results %}
   <div class="results">
     {% for k in results %}

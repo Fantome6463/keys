@@ -10,7 +10,7 @@
     </div>
     <button>Найти</button>
   </div>
-  <p class="muted hint">Пишите адрес, ящик или шкаф — например: <i>ленина 12 3</i>, <i>7-20</i>, <i>кольцо 1</i></p>
+  <p class="muted hint">Пишите адрес, ящик или шкаф — например: <i>ленина 12 3</i> <i>7-20</i> <i>кольцо 1</i></p>
 </form>
 
 <div id="results">
@@ -23,7 +23,7 @@
   {% for c in cabinets %}
   <div class="card cab {% if c.id == cabinet_id %}active{% endif %}">
     <a href="{{ url_for('index', cabinet=c.id) }}">
-      <span class="count" title="ключей">{{ c.key_count }}</span>
+      <span class="count" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M12 3v18M9.5 11v2M14.5 11v2"/></svg></span>
       <span><b>{{ c.number }}</b>{% if c.name %}<span class="name muted">{{ c.name }}</span>{% endif %}<span class="name muted">ключей: {{ c.key_count }}</span></span>
     </a>
     {% if user.is_admin %}

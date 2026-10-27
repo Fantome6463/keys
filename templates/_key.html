@@ -8,20 +8,24 @@
 {% macro key_card(k, full=false) %}
 <div class="card key{% if full %} full{% endif %}">
   {% if full %}<h1 class="addr">{{ k.address }}</h1>
-  {% else %}<a class="addr" href="{{ url_for('key_view', kid=k.id) }}">{{ k.address }} <span class="open">›</span></a>{% endif %}
-  <div class="where">
+  {% else %}<a class="addr" href="{{ url_for('key_view', kid=k.id) }}"><span>{{ k.address }}</span> <span class="open" aria-hidden="true">›</span></a>{% endif %}
+  <div class="tag">
     {% if k.cabinet_id %}
-    <span class="cab-tile"><small>Шкаф</small><b>{{ k.cabinet_number }}</b>{% if k.cabinet_name %}<em>{{ k.cabinet_name }}</em>{% endif %}</span>
+    <div class="tag-head"><span class="tag-label">Шкаф</span><b>{{ k.cabinet_number }}</b>{% if k.cabinet_name %}<span class="tag-sub">{{ k.cabinet_name }}</span>{% endif %}</div>
     {% else %}
-    <span class="elsewhere"><small>Не в шкафу — хранится</small><b>{{ k.info|phones if k.info else 'место не указано' }}</b></span>
+    <div class="tag-head away"><span class="tag-label">Не в шкафу — хранится</span><b>{{ k.info|phones if k.info else 'место не указано' }}</b></div>
     {% endif %}
-    {% if k.ring %}<a class="ring-link" href="{{ ring_url(k) }}" title="Показать всё кольцо"><small>Кольцо ›</small><b>{{ k.ring }}</b></a>
-    {% elif k.cabinet_id %}<span><small>Кольцо</small><b>—</b></span>{% endif %}
-    {% if k.ring_pos %}<span><small>Номер на кольце</small><b>{{ k.ring_pos }}</b></span>{% endif %}
-    {% if k.box or k.cabinet_id %}<span><small>Ящик</small><b>{{ k.box or '—' }}</b></span>{% endif %}
-    {% if k.floor %}<span><small>Этаж</small><b>{{ k.floor }}</b></span>{% endif %}
+    {% if k.ring or k.ring_pos or k.box or k.cabinet_id %}
+    <div class="tag-body">
+      {% if k.ring %}<a class="tag-cell link" href="{{ ring_url(k) }}" title="Показать всё кольцо"><span>Кольцо</span><b>{{ k.ring }} <em>›</em></b><i>всё кольцо ›</i></a>
+      {% else %}<div class="tag-cell"><span>Кольцо</span><b>—</b></div>{% endif %}
+      <div class="tag-cell"><span>Номер</span><b>{{ k.ring_pos or '—' }}</b></div>
+      <div class="tag-cell box"><span>Ящик</span><b>{{ k.box or '—' }}</b></div>
+    </div>
+    {% endif %}
   </div>
-  {% if k.ups or k.electron %}<div class="flags">{{ flag('ИБП', k.ups) }}{{ flag('Электрон', k.electron) }}</div>{% endif %}
+  {% if k.floor or k.ups or k.electron %}<div class="flags">
+    {%- if k.floor %}<span class="flag plain">Этаж {{ k.floor }}</span>{% endif %}{{ flag('ИБП', k.ups) }}{{ flag('Электрон', k.electron) }}</div>{% endif %}
   {% if k.info and k.cabinet_id %}<div class="info comment">{{ k.info|phones }}</div>{% endif %}
   {% if k.house_note %}<div class="info comment house"><small>Для всего дома</small>{{ k.house_note|phones }}</div>{% endif %}
   <div class="actions">

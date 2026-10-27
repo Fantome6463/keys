@@ -1,17 +1,22 @@
 {% extends "base.html" %}
-{% block content %}
-<form method="get" class="search-form card">
+{% block top_class %} hero{% endblock %}
+{% block hero %}
+<form method="get" class="search-form">
   <div class="search">
     <div class="search-box">
-      <input name="q" id="q" value="{{ q }}" type="search" placeholder="Найти ключ…"
-             autocomplete="off" autofocus>
+      <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input name="q" id="q" value="{{ q }}" type="search" placeholder="Адрес, ящик или шкаф"
+             autocomplete="off" autofocus aria-label="Поиск ключа">
       <button type="button" class="clear" id="clear" title="Очистить (Esc)" aria-label="Очистить"
               {% if not q %}hidden{% endif %}>&times;</button>
     </div>
     <button>Найти</button>
   </div>
-  <p class="muted hint">Пишите адрес, ящик или шкаф — например: <i>ленина 12 3</i> <i>7-20</i> <i>кольцо 1</i></p>
+  <p class="hint">Например: <i>ленина 12 3</i> <i>7-20</i> <i>кольцо 1</i></p>
 </form>
+{% endblock %}
+{% block content %}
+
 
 <div id="results">
 {% if results is not none %}{% include "_results.html" %}{% endif %}

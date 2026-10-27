@@ -9,7 +9,7 @@
 </head>
 <body class="{% block body_class %}{% endblock %}">
   {% if user %}
-  <header class="top"><div class="top-inner">
+  <header class="top{% block top_class %}{% endblock %}"><div class="top-inner">
     <a class="brand" href="{{ url_for('index') }}"><span class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M16 7l3 3M14 9l2 2"/></svg></span>Журнал ключей</a>
     <nav>
       {% if user.is_admin %}
@@ -22,7 +22,7 @@
         <button class="link" title="Вы вошли как {{ user.username }}">Выйти</button>
       </form>
     </nav>
-  </div></header>
+  </div>{% block hero %}{% endblock %}</header>
   {% endif %}
   <main>
     {% for cat, msg in get_flashed_messages(with_categories=true) %}
